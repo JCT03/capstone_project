@@ -97,7 +97,7 @@ CTRL-C to quit\n
             speed_ = (speed_ <= 0.01) ? 0.01 : speed_;
             turn_ = turn_ * speedBindings[key_][1];
             turn_ = (turn_ >= 4.5) ? 4.5 : turn_;
-            turn_ = (turn_ <= 0.01) ? 0.01 : turn_;
+            turn_ = (turn_ <= 0.1) ? 0.1 : turn_;
           } else if (key_ == '\x03') {
             break;
           }
