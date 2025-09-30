@@ -10,9 +10,11 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(irobot_create_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(tf2 REQUIRED)
 
 add_executable(collect src/collect.cpp)
-ament_target_dependencies(collect rclcpp irobot_create_msgs sensor_msgs)
+ament_target_dependencies(collect rclcpp irobot_create_msgs sensor_msgs nav_msgs tf2)
 
 install(TARGETS collect
   DESTINATION lib/${PROJECT_NAME})

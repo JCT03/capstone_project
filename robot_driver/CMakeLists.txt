@@ -11,9 +11,10 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(std_msgs REQUIRED)
 
 add_executable(drive src/drive.cpp)
-ament_target_dependencies(drive rclcpp geometry_msgs nav_msgs tf2)
+ament_target_dependencies(drive rclcpp geometry_msgs nav_msgs tf2 std_msgs)
 
 install(TARGETS drive
   DESTINATION lib/${PROJECT_NAME})

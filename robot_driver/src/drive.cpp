@@ -12,6 +12,7 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2/LinearMath/Matrix3x3.h"
+#include "std_msgs/msg/string.hpp"
 
 // Gemini AI used to generate code to read input and perform yaw conversion
 static struct termios oldt;
@@ -31,9 +32,13 @@ void restoreTerminalMode() {
 class Teleop : public rclcpp::Node {
 public:
   Teleop() : Node("teleop") {
-    _publisher = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+    _inputPublisher = this->create_publisher<std_msgs::msg::String>("input", 10);
+    _twistPublisher = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
     _odomSubscriber = this->create_subscription<nav_msgs::msg::Odometry>(
-        "odom", rclcpp::QoS(10).best_effort(), std::bind(&Teleop::odom_callback, this, std::placeholders::_1));
+        "odom", rclcpp::QoS(10).best_effort(), std::bind(&Teleop::odom_callback, this,
+        std::placeholders::_1));
+   _outputSubscriber=this->create_subscription<std_msgs::msg::String>("output", 10,
+     std::bind(&Teleop::output_callback, this, std::placeholders::_1));
     moveBindings = {
       {'i', {1, 0, 0, 0}},
       {'o', {1, 0, 0, -1}},
@@ -89,7 +94,7 @@ CTRL-C to quit\n
           twist.angular.x = 0;
           twist.angular.y = 0;
           twist.angular.z = moveBindings[key_][3] * turn_;
-          _publisher->publish(twist);
+          _twistPublisher->publish(twist);
         } else {
           if (speedBindings.count(key_) == 1) {
             speed_ = speed_ * speedBindings[key_][0];
@@ -100,11 +105,15 @@ CTRL-C to quit\n
             turn_ = (turn_ <= 0.1) ? 0.1 : turn_;
           } else if (key_ == '\x03') {
             break;
+          } else {
+            std_msgs::msg::String c = std_msgs::msg::String();
+            c.data = key_;
+            _inputPublisher->publish(c);
           }
         }
       }
       rclcpp::spin_some(this->get_node_base_interface());
-      printf("\rCurrent Position: X: %.2f, Y: %.2f, Yaw: %.2f deg", odomX_, odomY_, odomTheta_);
+      printf("\rCurrent Position: X: %.2f, Y: %.2f, Yaw: %.2f deg     ", odomX_, odomY_, odomTheta_);
       fflush(stdout);
     }
     restoreTerminalMode();
@@ -113,13 +122,18 @@ CTRL-C to quit\n
 private:
   std::map<char, std::vector<float>> moveBindings;
   std::map<char, std::vector<float>> speedBindings;
-  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr _publisher;
+  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr _twistPublisher;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr _inputPublisher;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr _odomSubscriber;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr _outputSubscriber;
   float speed_ = 0.25;
   float turn_ = 0.75;
   double odomX_ = 0.0;
   double odomY_ = 0.0;
   double odomTheta_ = 0.0;
+  void output_callback(const std_msgs::msg::String::SharedPtr msg) {
+    printf("\n%s\033[F", (msg->data).c_str());
+  }
   void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg) {
     odomX_ = msg->pose.pose.position.x;
     odomY_ = msg->pose.pose.position.y;
