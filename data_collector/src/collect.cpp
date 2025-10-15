@@ -53,7 +53,7 @@ class Collect : public rclcpp::Node {
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr _outputPublisher;
     rclcpp::Client<irobot_create_msgs::srv::ResetPose>::SharedPtr _poseClient;
     bool collision_occured = false;
-    std::array<double, 21> sensor_data{};
+    std::array<double, 22> sensor_data{};
     std::array<double, 3> odom_offset{};
     double odomX_ = 0.0;
     double odomY_ = 0.0;
@@ -73,6 +73,9 @@ class Collect : public rclcpp::Node {
       double roll, pitch, yaw;
       m.getRPY(roll, pitch, yaw);
       odomTheta_ = yaw * 180.0 / M_PI;
+      if (!collision_occured) {
+        sensor_data[21] = odomTheta_;
+      }
   }
     void input_callback(const std_msgs::msg::String::SharedPtr msg) {
       if (msg->data == "1") {
