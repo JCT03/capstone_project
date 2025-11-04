@@ -1,0 +1,15 @@
+.vscode/settings.json
+neural_network/.vscode/c_cpp_properties.json
+neural_network/.vscode/launch.json
+neural_network/.vscode/settings.json
+neural_network/build/Makefile
+neural_network/build/collision_network_builder
+neural_network/build/CMakeFiles/TargetDirectories.txt
+neural_network/build/CMakeFiles/progress.marks
+neural_network/build/CMakeFiles/Makefile2
+neural_network/build/CMakeFiles/Makefile.cmake
+neural_network/build/CMakeFiles/collision_network_builder.dir/progress.make
+neural_network/build/CMakeFiles/collision_network_builder.dir/link.txt
+neural_network/build/CMakeFiles/collision_network_builder.dir/flags.make
+neural_network/build/CMakeFiles/collision_network_builder.dir/DependInfo.cmake
+/neural_network/build
