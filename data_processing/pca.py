@@ -10,10 +10,10 @@ testing_df = pd.read_csv(path + "/testing.csv", header=None)
 
 input_training_df = training_df.iloc[:,:22]
 input_validation_df = validation_df.iloc[:,:22]
-input_testing_df = training_df.iloc[:,:22]
+input_testing_df = testing_df.iloc[:,:22]
 output_training_df = training_df.iloc[:,22:]
 output_validation_df = validation_df.iloc[:,22:]
-output_testing_df = training_df.iloc[:,22:]
+output_testing_df = testing_df.iloc[:,22:]
 
 pca_20 = PCA(n_components=20)
 pca_20_training = pd.DataFrame(pca_20.fit_transform(input_training_df))
@@ -29,8 +29,8 @@ print("PCA 15 explained variance: " + str(np.sum(pca_15.explained_variance_ratio
 
 pca_10 = PCA(n_components=10)
 pca_10_training = pd.DataFrame(pca_10.fit_transform(input_training_df))
-pca_10_testing = pd.DataFrame(pca_10.transform(input_testing_df))
 pca_10_validation = pd.DataFrame(pca_10.transform(input_validation_df))
+pca_10_testing = pd.DataFrame(pca_10.transform(input_testing_df))
 print("PCA 10 explained variance: " + str(np.sum(pca_10.explained_variance_ratio_)))
 
 pca_5 = PCA(n_components=5)
@@ -66,13 +66,13 @@ os.makedirs(path + "/pca/5", exist_ok=True)
 
 pca_20_training.to_csv(path + "/pca/20/training.csv", header=False, index=False)
 pca_20_validation.to_csv(path + "/pca/20/validation.csv", header=False, index=False)
-pca_20_training.to_csv(path + "/pca/20/testing.csv", header=False, index=False)
+pca_20_testing.to_csv(path + "/pca/20/testing.csv", header=False, index=False)
 pca_15_training.to_csv(path + "/pca/15/training.csv", header=False, index=False)
 pca_15_validation.to_csv(path + "/pca/15/validation.csv", header=False, index=False)
-pca_15_training.to_csv(path + "/pca/15/testing.csv", header=False, index=False)
+pca_15_testing.to_csv(path + "/pca/15/testing.csv", header=False, index=False)
 pca_10_training.to_csv(path + "/pca/10/training.csv", header=False, index=False)
 pca_10_validation.to_csv(path + "/pca/10/validation.csv", header=False, index=False)
-pca_10_training.to_csv(path + "/pca/10/testing.csv", header=False, index=False)
+pca_10_testing.to_csv(path + "/pca/10/testing.csv", header=False, index=False)
 pca_5_training.to_csv(path + "/pca/5/training.csv", header=False, index=False)
 pca_5_validation.to_csv(path + "/pca/5/validation.csv", header=False, index=False)
-pca_5_training.to_csv(path + "/pca/5/testing.csv", header=False, index=False)
+pca_5_testing.to_csv(path + "/pca/5/testing.csv", header=False, index=False)

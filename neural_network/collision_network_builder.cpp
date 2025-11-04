@@ -64,12 +64,15 @@ struct Net : torch::nn::Module {
 };
 
 int main() {
-    std::string training_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/raw/training.csv";
-    std::string testing_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/raw/testing.csv";
-    std::string model_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/networks/raw/net5.pt";
-    std::string output_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/output_data/raw/output5.csv";
+    std::string training_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/min_max/pca/5/training.csv";
+    std::string validation_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/min_max/pca/5/validation.csv";
+    std::string testing_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/min_max/pca/5/testing.csv";
+    std::string model_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/networks/min_max/pca5net.pt";
+    std::string output_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/output_data/min_max/pca5output.csv";
+    double learning_rate = 0.001;
+    int batch_size = 32;
 
-    int num_inputs = 22;
+    int num_inputs = 5;
     int num_outputs = 3;
 
     auto base_dataset = CustomDataset(training_path, num_inputs, num_outputs);
@@ -78,13 +81,24 @@ int main() {
     auto data_loader = torch::data::make_data_loader(
         std::move(mapped_dataset),
         torch::data::samplers::RandomSampler(dataset_size),
-        torch::data::DataLoaderOptions().batch_size(32)
+        torch::data::DataLoaderOptions().batch_size(batch_size)
     );
+    auto base_validation_dataset = CustomDataset(validation_path, num_inputs, num_outputs);
+    const size_t validation_dataset_size = base_validation_dataset.size().value();
+    auto mapped_validation_dataset = std::move(base_validation_dataset).map(torch::data::transforms::Stack<>());
+    auto validation_data_loader = torch::data::make_data_loader(
+        std::move(mapped_validation_dataset),
+        torch::data::samplers::RandomSampler(validation_dataset_size),
+        torch::data::DataLoaderOptions().batch_size(validation_dataset_size)
+    );
+
     auto net = std::make_shared<Net>(num_inputs, num_outputs);
     torch::nn::MSELoss criterion;
-    torch::optim::Adam optimizer(net->parameters(), 0.001);
-    for (size_t epoch = 1; epoch <= 5; ++epoch) {
-        size_t batch_index = 0;
+    torch::optim::Adam optimizer(net->parameters(), learning_rate);
+    double least_loss = 0;
+    int epochs_since_least = 0;
+    double validation_loss = 0;
+    for (size_t epoch = 0; epoch <= 100000; ++epoch) {
         for (auto& batch : *data_loader) {
             optimizer.zero_grad();
             torch::Tensor output = net->forward(batch.data);
@@ -92,8 +106,28 @@ int main() {
             loss.backward();
             optimizer.step();
         }
+        net->eval();
+        torch::NoGradGuard no_grad; 
+        for (auto& batch : *validation_data_loader) {
+            torch::Tensor output = net->forward(batch.data);
+            validation_loss = criterion(output, batch.target).item<double>();
+        }
+        net->train(); 
+        if ((validation_loss < least_loss) || (epoch == 0)) {
+            torch::save(net, model_path);
+            least_loss = validation_loss;
+            epochs_since_least = 0;
+        }
+        else if (++epochs_since_least == 100) {
+                std::cout << "trained for " << epoch - 100 << " epochs" << std::endl;
+                break;
+        }
     }
-    torch::save(net, model_path);
+
+    auto eval_net = std::make_shared<Net>(num_inputs, num_outputs);
+    torch::load(eval_net, model_path);
+    eval_net->eval();
+    torch::NoGradGuard no_grad;
     auto base_test_dataset = CustomDataset(testing_path, num_inputs, num_outputs);
     const size_t test_dataset_size = base_test_dataset.size().value();
     auto mapped_test_dataset = std::move(base_test_dataset).map(torch::data::transforms::Stack<>());
@@ -103,7 +137,7 @@ int main() {
         torch::data::DataLoaderOptions().batch_size(32)
     );
     for (auto& batch : *test_data_loader) {
-        torch::Tensor test_output = net->forward(batch.data);
+        torch::Tensor test_output = eval_net->forward(batch.data);
         std::ofstream file(output_path, std::ios::app);
         for (size_t i = 0; i < test_output.size(0); i++) {
             for (size_t j = 0; j < test_output.size(1); j++) {
