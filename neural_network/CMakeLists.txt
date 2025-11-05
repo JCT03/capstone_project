@@ -9,7 +9,9 @@ find_package(Torch REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
 add_executable(collision_network_builder collision_network_builder.cpp)
-
 target_link_libraries(collision_network_builder "${TORCH_LIBRARIES}")
-
 set_property(TARGET collision_network_builder PROPERTY CXX_STANDARD 17)
+
+add_executable(collision_network_builder2 collision_network_builder2.cpp)
+target_link_libraries(collision_network_builder2 "${TORCH_LIBRARIES}")
+set_property(TARGET collision_network_builder2 PROPERTY CXX_STANDARD 17)
