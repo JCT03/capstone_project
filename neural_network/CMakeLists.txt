@@ -15,3 +15,7 @@ set_property(TARGET collision_network_builder PROPERTY CXX_STANDARD 17)
 add_executable(collision_network_builder2 collision_network_builder2.cpp)
 target_link_libraries(collision_network_builder2 "${TORCH_LIBRARIES}")
 set_property(TARGET collision_network_builder2 PROPERTY CXX_STANDARD 17)
+
+add_executable(collision_network_optimizer collision_network_optimizer.cpp)
+target_link_libraries(collision_network_optimizer "${TORCH_LIBRARIES}")
+set_property(TARGET collision_network_optimizer PROPERTY CXX_STANDARD 17)

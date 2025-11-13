@@ -51,32 +51,31 @@ class CustomDataset : public torch::data::Dataset<CustomDataset>{
 
 struct Net : torch::nn::Module {
   Net(const int& num_inputs, const int& num_outputs) {
-    fc1 = register_module("fc1", torch::nn::Linear(num_inputs, 32));
-    dropout = register_module("dropout", torch::nn::Dropout(0.2));
-    fc2 = register_module("fc2", torch::nn::Linear(32, 64));
-    fc3 = register_module("fc3", torch::nn::Linear(64, num_outputs));
+    int middle = (num_inputs+num_outputs)/2;
+    fc1 = register_module("fc1", torch::nn::Linear(num_inputs, middle));
+    dropout = register_module("dropout", torch::nn::Dropout(0.1));
+    fc2 = register_module("fc2", torch::nn::Linear(middle, num_outputs));
   }
   torch::Tensor forward(torch::Tensor x) {
     x = torch::relu(fc1->forward(x));
     x = dropout->forward(x);
-    x = torch::relu(fc2->forward(x));
-    x = fc3->forward(x);
+    x = fc2->forward(x);
     return x;
   }
-  torch::nn::Linear fc1{nullptr}, fc2{nullptr}, fc3{nullptr};
+  torch::nn::Linear fc1{nullptr}, fc2{nullptr};
   torch::nn::Dropout dropout{nullptr};
 };
 
 int main() {
-    std::string training_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/min_max/pca/5/training.csv";
-    std::string validation_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/min_max/pca/5/validation.csv";
-    std::string testing_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/min_max/pca/5/testing.csv";
-    std::string model_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/networks/2/min_max/pca5net.pt";
-    std::string output_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/output_data/2/min_max/pca5output.csv";
-    double learning_rate = 0.001;
-    int batch_size = 32;
+    std::string training_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/z/training.csv";
+    std::string validation_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/z/validation.csv";
+    std::string testing_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/z/testing.csv";
+    std::string model_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/networks/optimized/C-.pt";
+    std::string output_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/output_data/optimized/C-.csv";
+    double learning_rate = 0.005;
+    int batch_size = 1;
 
-    int num_inputs = 5;
+    int num_inputs = 22;
     int num_outputs = 3;
 
     auto base_dataset = CustomDataset(training_path, num_inputs, num_outputs);
@@ -144,6 +143,7 @@ int main() {
     for (auto& batch : *test_data_loader) {
         torch::Tensor test_output = eval_net->forward(batch.data);
         std::ofstream file(output_path, std::ios::app);
+        std::cout << criterion(test_output, batch.target).item<double>() << std::endl;
         for (size_t i = 0; i < test_output.size(0); i++) {
             for (size_t j = 0; j < test_output.size(1); j++) {
                 file << test_output[i][j].item() << ",";

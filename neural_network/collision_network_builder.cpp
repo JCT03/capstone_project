@@ -64,15 +64,15 @@ struct Net : torch::nn::Module {
 };
 
 int main() {
-    std::string training_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/min_max/pca/5/training.csv";
-    std::string validation_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/min_max/pca/5/validation.csv";
-    std::string testing_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/min_max/pca/5/testing.csv";
-    std::string model_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/networks/min_max/pca5net.pt";
-    std::string output_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/output_data/min_max/pca5output.csv";
+    std::string training_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/raw/training.csv";
+    std::string validation_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/raw/validation.csv";
+    std::string testing_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/raw/testing.csv";
+    std::string model_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/networks/1/raw/net.pt";
+    std::string output_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/output_data/1/raw/output.csv";
     double learning_rate = 0.001;
     int batch_size = 32;
 
-    int num_inputs = 5;
+    int num_inputs = 22;
     int num_outputs = 3;
 
     auto base_dataset = CustomDataset(training_path, num_inputs, num_outputs);
