@@ -62,7 +62,7 @@ class Offset : public rclcpp::Node {
         "odom", rclcpp::QoS(10).best_effort(), std::bind(&Offset::odom_callback, this, std::placeholders::_1));
       _outputPublisher = this->create_publisher<std_msgs::msg::String>("output", 10);
       _net = std::make_shared<Net>();
-      torch::load(_net, "/Users/jacobcollier-tenison/GitHub/capstone_project/networks/optimized/A.pt");
+      torch::load(_net, "/home/robotics/capstone_project/networks/optimized/A.pt");
       odom_offset = {0, 0, 0};
     }
   private:
@@ -78,10 +78,14 @@ class Offset : public rclcpp::Node {
     std::array<double, 3> odom_offset{};
     std::shared_ptr<Net> _net;
     rclcpp::TimerBase::SharedPtr _timer;
-
     void reset_collision_state() {
+	sensor_data[0] = -0.683309421;
+	sensor_data[1] = -0.683309421;
+	sensor_data[2] = -0.683309421;
+	sensor_data[3] = -0.683309421;
+	sensor_data[4] = -0.683309421;
         collision_occured = false;
-        _timer->cancel(); 
+        _timer->cancel();
     }
 
     void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg) {
@@ -98,14 +102,20 @@ class Offset : public rclcpp::Node {
       m.getRPY(roll, pitch, yaw);
       double odomTheta_ = yaw * 180.0 / M_PI;
       if (!collision_occured) {
-        sensor_data[21] = odomTheta_;
+        sensor_data[21] = (odomTheta_+5.175686471)/100.3310042;
       }
       double corrected_theta = odomTheta_ + odom_offset[0];
+      corrected_theta = std::fmod(corrected_theta, 360.0);
+      if (corrected_theta > 180) {
+        corrected_theta -= 360;
+      } else if (corrected_theta < -180) {
+        corrected_theta += 360;
+      }
       double corrected_x = odomX_ + odom_offset[1];
       double corrected_y = odomY_ + odom_offset[2];
       std::stringstream ss;
       ss << "Corrected Position: X: " << std::fixed << std::setprecision(2) 
-        << corrected_x << ", Y: " << corrected_y << ", Yaw: " << corrected_theta << " deg";
+        << corrected_x << ", Y: " << corrected_y << ", Yaw: " << corrected_theta << " deg     ";
       std_msgs::msg::String s = std_msgs::msg::String();
       s.data = ss.str();
       _outputPublisher->publish(s);
@@ -113,37 +123,37 @@ class Offset : public rclcpp::Node {
 
     void wheel_callback(const irobot_create_msgs::msg::WheelVels::SharedPtr msg) {
       if (!collision_occured) {
-        sensor_data[19] = msg->velocity_left;
-        sensor_data[20] = msg->velocity_right;
+        sensor_data[19] = (msg->velocity_left-7.569417752)/3.62661051;
+        sensor_data[20] = (msg->velocity_right-7.638250103)/3.473969527;
       }
     }
 
     void mouse_callback(const irobot_create_msgs::msg::Mouse::SharedPtr msg) {
       if (!collision_occured) {
-        sensor_data[18] = msg->last_squal;
+        sensor_data[18] = (msg->last_squal-107.0426065)/28.50345253;
       }
     }
 
     void ir_callback(const irobot_create_msgs::msg::IrIntensityVector::SharedPtr msg) {
       if (!collision_occured) {
-        sensor_data[11] = msg->readings[0].value;
-        sensor_data[12] = msg->readings[1].value;
-        sensor_data[13] = msg->readings[2].value;
-        sensor_data[14] = msg->readings[3].value;
-        sensor_data[15] = msg->readings[4].value;
-        sensor_data[16] = msg->readings[5].value;
-        sensor_data[17] = msg->readings[6].value;
+        sensor_data[11] = (msg->readings[0].value-238.3784461)/515.4597672;
+        sensor_data[12] = (msg->readings[1].value-665.1929825)/1094.418908;
+        sensor_data[13] = (msg->readings[2].value-617.4185464)/961.5451708;
+        sensor_data[14] = (msg->readings[3].value-839.6616541)/1114.868215;
+        sensor_data[15] = (msg->readings[4].value-860.8295739)/1160.702961;
+        sensor_data[16] = (msg->readings[5].value-657.481203)/1105.995776;
+        sensor_data[17] = (msg->readings[6].value-339.0050125)/716.1085033;
       }
     }
 
     void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg) {
       if (!collision_occured) {
-        sensor_data[5] = msg->linear_acceleration.x;
-        sensor_data[6] = msg->linear_acceleration.y;
-        sensor_data[7] = msg->linear_acceleration.z;
-        sensor_data[8] = msg->angular_velocity.x;
-        sensor_data[9] = msg->angular_velocity.y;
-        sensor_data[10] = msg->angular_velocity.z;
+        sensor_data[5] = (msg->linear_acceleration.x+0.884702229)/2.989697113;
+        sensor_data[6] = (msg->linear_acceleration.y-0.0269848)/1.011681074;
+        sensor_data[7] = (msg->linear_acceleration.z-0.095883377)/0.76527972;
+        sensor_data[8] = (msg->angular_velocity.x+0.000608536)/0.034217143;
+        sensor_data[9] = (msg->angular_velocity.y+0.000023298)/0.078649704;
+        sensor_data[10] = (msg->angular_velocity.z-0.0297538)/0.479763795;
       }
     }
 
@@ -152,15 +162,15 @@ class Offset : public rclcpp::Node {
         for (const auto& hazard : msg->detections) {
           if (hazard.type == irobot_create_msgs::msg::HazardDetection::BUMP) {
             if (hazard.header.frame_id == "bump_left") {
-              sensor_data[0] = 1.0;
+              sensor_data[0] = 1.463465846;
             } else if (hazard.header.frame_id == "bump_front_left") {
-              sensor_data[1] = 1.0;
+              sensor_data[1] = 1.463465846;
             } else if (hazard.header.frame_id == "bump_front_center") {
-              sensor_data[2] = 1.0;
+              sensor_data[2] = 1.463465846;
             } else if (hazard.header.frame_id == "bump_front_right") {
-              sensor_data[3] = 1.0;
+              sensor_data[3] = 1.463465846;
             } else {
-              sensor_data[4] = 1.0;
+              sensor_data[4] = 1.463465846;
             }
             collision_occured=true;
             _net->eval();
@@ -168,11 +178,11 @@ class Offset : public rclcpp::Node {
             torch::Tensor input_tensor = torch::from_blob(sensor_data.data(),{1,22},torch::kDouble).to(torch::kFloat);;
             torch::Tensor output_tensor = _net->forward(input_tensor);
             float* output_data_ptr = output_tensor.data_ptr<float>();
-            odom_offset[0] += static_cast<double>(output_data_ptr[0]);
-            odom_offset[1] += static_cast<double>(output_data_ptr[1]);
-            odom_offset[2] += static_cast<double>(output_data_ptr[2]);
+            odom_offset[0] += static_cast<double>(output_data_ptr[0])*2.725697775+0.054030836;
+            odom_offset[1] += static_cast<double>(output_data_ptr[1])*0.117770977-0.01201306;
+            odom_offset[2] += static_cast<double>(output_data_ptr[2])*0.172681628-0.010258537;
             _timer = this->create_wall_timer(
-                std::chrono::seconds(3), 
+                std::chrono::seconds(3),
                 std::bind(&Offset::reset_collision_state, this)
             );
           }

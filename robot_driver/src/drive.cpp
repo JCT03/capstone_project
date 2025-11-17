@@ -29,16 +29,16 @@ void restoreTerminalMode() {
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }
 
-class Teleop : public rclcpp::Node {
+class Drive : public rclcpp::Node {
 public:
-  Teleop() : Node("teleop") {
+  Drive() : Node("drive") {
     _inputPublisher = this->create_publisher<std_msgs::msg::String>("input", 10);
     _twistPublisher = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
     _odomSubscriber = this->create_subscription<nav_msgs::msg::Odometry>(
-        "odom", rclcpp::QoS(10).best_effort(), std::bind(&Teleop::odom_callback, this,
+        "odom", rclcpp::QoS(10).best_effort(), std::bind(&Drive::odom_callback, this,
         std::placeholders::_1));
    _outputSubscriber=this->create_subscription<std_msgs::msg::String>("output", 10,
-     std::bind(&Teleop::output_callback, this, std::placeholders::_1));
+     std::bind(&Drive::output_callback, this, std::placeholders::_1));
     moveBindings = {
       {'i', {1, 0, 0, 0}},
       {'o', {1, 0, 0, -1}},
@@ -152,7 +152,7 @@ private:
 
 int main(int argc, char** argv) {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<Teleop>();
+  auto node = std::make_shared<Drive>();
   node->run_node();
   rclcpp::shutdown();
   return 0;

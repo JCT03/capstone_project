@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(adjusted_odometry_publisher)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -15,9 +18,11 @@ find_package(tf2 REQUIRED)
 find_package(torch REQUIRED)
 
 add_executable(correct src/correct.cpp)
-ament_target_dependencies(correct rclcpp irobot_create_msgs sensor_msgs nav_msgs tf2 torch)
+ament_target_dependencies(correct rclcpp irobot_create_msgs sensor_msgs nav_msgs tf2)
 
-install(TARGETS collect
+target_link_libraries(correct torch c10)
+
+install(TARGETS correct
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
