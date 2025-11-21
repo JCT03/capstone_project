@@ -53,7 +53,7 @@ struct Net : torch::nn::Module {
   Net(const int& num_inputs, const int& num_outputs) {
     int middle = (num_inputs+num_outputs)/2;
     fc1 = register_module("fc1", torch::nn::Linear(num_inputs, middle));
-    dropout = register_module("dropout", torch::nn::Dropout(0.1));
+    dropout = register_module("dropout", torch::nn::Dropout(0.3));
     fc2 = register_module("fc2", torch::nn::Linear(middle, num_outputs));
   }
   torch::Tensor forward(torch::Tensor x) {
@@ -70,10 +70,10 @@ int main() {
     std::string training_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/z/training.csv";
     std::string validation_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/z/validation.csv";
     std::string testing_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/collision_data/z/testing.csv";
-    std::string model_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/networks/optimized/C-.pt";
-    std::string output_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/output_data/optimized/C-.csv";
-    double learning_rate = 0.005;
-    int batch_size = 1;
+    std::string model_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/networks/optimized/MAE-.pt";
+    std::string output_path = "/Users/jacobcollier-tenison/GitHub/capstone_project/output_data/optimized/MAE-.csv";
+    double learning_rate = 0.01;
+    int batch_size = 4;
 
     int num_inputs = 22;
     int num_outputs = 3;
@@ -96,7 +96,7 @@ int main() {
     );
 
     auto net = std::make_shared<Net>(num_inputs, num_outputs);
-    torch::nn::MSELoss criterion;
+    torch::nn::L1Loss criterion;
     torch::optim::Adam optimizer(net->parameters(), learning_rate);
     double least_loss = 0;
     int epochs_since_least = 0;

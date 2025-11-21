@@ -79,11 +79,11 @@ class Offset : public rclcpp::Node {
     std::shared_ptr<Net> _net;
     rclcpp::TimerBase::SharedPtr _timer;
     void reset_collision_state() {
-	sensor_data[0] = -0.683309421;
-	sensor_data[1] = -0.683309421;
-	sensor_data[2] = -0.683309421;
-	sensor_data[3] = -0.683309421;
-	sensor_data[4] = -0.683309421;
+	  sensor_data[0] = -0.683309421;
+	  sensor_data[1] = -0.683309421;
+	  sensor_data[2] = -0.683309421;
+	  sensor_data[3] = -0.683309421;
+  	sensor_data[4] = -0.683309421;
         collision_occured = false;
         _timer->cancel();
     }

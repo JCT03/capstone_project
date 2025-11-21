@@ -157,7 +157,7 @@ int main() {
         torch::data::samplers::SequentialSampler(test_dataset_size),
         torch::data::DataLoaderOptions().batch_size(test_dataset_size)
     );
-    std::ofstream file("/Users/jacobcollier-tenison/GitHub/capstone_project/output_data/loss_comparisons/loss.csv", std::ios::app);
+    std::ofstream file("/Users/jacobcollier-tenison/GitHub/capstone_project/output_data/loss_comparisons/sgdm_loss.csv", std::ios::app);
     std::vector<double> learning_rates = {.0001, .0005, .001, .005, .01, .05};
     std::vector<int> batch_sizes = {1, 2, 4, 8, 16, 32, 64, 128};
     std::vector<double> dropouts = {0, .1, .2, .3, .4, .5, .6};
@@ -191,7 +191,7 @@ int main() {
                         eval_net = std::make_shared<Net4>(num_inputs, num_outputs, dropout);
                     }
                     torch::nn::MSELoss criterion;
-                    torch::optim::Adam optimizer(net->parameters(), learning_rate);
+                    torch::optim::SGD optimizer(net->parameters(), torch::optim::SGDOptions(learning_rate).momentum(0.9));
                     double least_loss = 0;
                     int epochs_since_least = 0;
                     double validation_loss = 0;
