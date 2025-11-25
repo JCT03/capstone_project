@@ -1,6 +1,6 @@
 # Capstone Project
 
-This repository creates all the code, neural networks, and output data created in the process of my senior capstone project.
+This repository creates all the code, neural networks, and data created in the process of my senior capstone project.
 
 ## Contents
 
