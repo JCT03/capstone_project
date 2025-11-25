@@ -23,6 +23,7 @@
 #include "geometry_msgs/msg/pose.hpp"
 #include <torch/torch.h>
 
+// Defines neural net structure
 struct Net : torch::nn::Module {
   Net() {
     fc1 = register_module("fc1", torch::nn::Linear(22, 32));
@@ -43,67 +44,110 @@ struct Net : torch::nn::Module {
   torch::nn::Dropout dropout1{nullptr}, dropout2{nullptr};
 };
 
+// Node to publish offset odometry data using neural network
 class Offset : public rclcpp::Node {
   public:
     Offset() : Node("offset") {
-      _hazardSubscriber = this->create_subscription<irobot_create_msgs::msg::HazardDetectionVector>(
-        "hazard_detection", rclcpp::QoS(10).best_effort(), std::bind(&Offset::hazard_callback, this,
-        std::placeholders::_1));
+      // initializes subscribers to relevant sensor topics and binds to callbacks
+      _hazardSubscriber = this->create_subscription<irobot_create_msgs::msg::
+        HazardDetectionVector>("hazard_detection", rclcpp::QoS(10).best_effort(),
+        std::bind(&Offset::hazard_callback, this, std::placeholders::_1));
       _imuSubscriber = this->create_subscription<sensor_msgs::msg::Imu>("imu",
-         rclcpp::QoS(10).best_effort(), std::bind(&Offset::imu_callback, this, std::placeholders::_1));
-      _irSubscriber = this->create_subscription<irobot_create_msgs::msg::IrIntensityVector>(
-        "ir_intensity", rclcpp::QoS(10).best_effort(), std::bind(&Offset::ir_callback, this,
+        rclcpp::QoS(10).best_effort(), std::bind(&Offset::imu_callback, this, 
         std::placeholders::_1));
-      _mouseSubscriber = this->create_subscription<irobot_create_msgs::msg::Mouse>("mouse",
-        rclcpp::QoS(10).best_effort(), std::bind(&Offset::mouse_callback, this, std::placeholders::_1));
-      _wheelSubscriber = this->create_subscription<irobot_create_msgs::msg::WheelVels>("wheel_vels",
-        rclcpp::QoS(10).best_effort(), std::bind(&Offset::wheel_callback, this, std::placeholders::_1));
-      _odomSubscriber = this->create_subscription<nav_msgs::msg::Odometry>(
-        "odom", rclcpp::QoS(10).best_effort(), std::bind(&Offset::odom_callback, this, std::placeholders::_1));
+      _irSubscriber = this->create_subscription<irobot_create_msgs::msg::
+        IrIntensityVector>("ir_intensity", rclcpp::QoS(10).best_effort(),
+        std::bind(&Offset::ir_callback, this,std::placeholders::_1));
+      _mouseSubscriber = this->create_subscription<irobot_create_msgs::msg::Mouse>(
+        "mouse", rclcpp::QoS(10).best_effort(), std::bind(&Offset::mouse_callback, this,
+        std::placeholders::_1));
+      _wheelSubscriber = this->create_subscription<irobot_create_msgs::msg::WheelVels>(
+        "wheel_vels", rclcpp::QoS(10).best_effort(), std::bind(&Offset::wheel_callback,
+        this, std::placeholders::_1));
+      _odomSubscriber = this->create_subscription<nav_msgs::msg::Odometry>("odom",
+        rclcpp::QoS(10).best_effort(), std::bind(&Offset::odom_callback, this,
+        std::placeholders::_1));
+
+      // Creates publisher to odom topic to publish offset odometry
       _outputPublisher = this->create_publisher<std_msgs::msg::String>("output", 10);
+
+      // Creates neural network object
       _net = std::make_shared<Net>();
+      
+      // Loads pre-trained neural network object
       torch::load(_net, "/home/robotics/capstone_project/networks/optimized/A.pt");
+
+      // Variable to store cumulative offset
       odom_offset = {0, 0, 0};
     }
   private:
-    rclcpp::Subscription<irobot_create_msgs::msg::HazardDetectionVector>::SharedPtr _hazardSubscriber;
+    // Declares subscribers and publishers
+    rclcpp::Subscription<irobot_create_msgs::msg::HazardDetectionVector>::SharedPtr
+      _hazardSubscriber;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr _imuSubscriber;
-    rclcpp::Subscription<irobot_create_msgs::msg::IrIntensityVector>::SharedPtr _irSubscriber;
+    rclcpp::Subscription<irobot_create_msgs::msg::IrIntensityVector>::SharedPtr
+      _irSubscriber;
     rclcpp::Subscription<irobot_create_msgs::msg::Mouse>::SharedPtr _mouseSubscriber;
-    rclcpp::Subscription<irobot_create_msgs::msg::WheelVels>::SharedPtr _wheelSubscriber;
+    rclcpp::Subscription<irobot_create_msgs::msg::WheelVels>::SharedPtr
+      _wheelSubscriber;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr _odomSubscriber;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr _outputPublisher;
+
+    // Variable to track when collision is being handled
     bool collision_occured = false;
+
+    // Arrays to store sensor and odometry data
     std::array<double, 22> sensor_data{};
     std::array<double, 3> odom_offset{};
     std::shared_ptr<Net> _net;
+
+    // Initializes timer that is used to clear collision
     rclcpp::TimerBase::SharedPtr _timer;
+
+    // Function used to reset after collision
     void reset_collision_state() {
-	  sensor_data[0] = -0.683309421;
-	  sensor_data[1] = -0.683309421;
-	  sensor_data[2] = -0.683309421;
-	  sensor_data[3] = -0.683309421;
-  	sensor_data[4] = -0.683309421;
-        collision_occured = false;
-        _timer->cancel();
+      // Sets sensor data corresponding to bump sensors to standerdized 0
+	    sensor_data[0] = -0.683309421;
+	    sensor_data[1] = -0.683309421;
+	    sensor_data[2] = -0.683309421;
+	    sensor_data[3] = -0.683309421;
+  	  sensor_data[4] = -0.683309421;
+
+      // Sets to false so that a new collisions will be recognized
+      collision_occured = false;
+
+      // Deletes timer so that function will not continue to be called
+      _timer->cancel();
     }
 
+    // Callback function to save odometry angle and public corrected odometry
     void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg) {
+      // Extracts x and y from odom message
       double odomX_ = msg->pose.pose.position.x;
       double odomY_ = msg->pose.pose.position.y;
+
+      // Creates quaternion from odom message
       tf2::Quaternion q(
         msg->pose.pose.orientation.x,
         msg->pose.pose.orientation.y,
         msg->pose.pose.orientation.z,
         msg->pose.pose.orientation.w
       );
+
+      // Creates matrix from quaternion
       tf2::Matrix3x3 m(q);
+
+      // Calculates roll, pitch, yaw and saves yaw as theta value
       double roll, pitch, yaw;
       m.getRPY(roll, pitch, yaw);
       double odomTheta_ = yaw * 180.0 / M_PI;
+
+      // Saves theta value in vector if not active collision
       if (!collision_occured) {
         sensor_data[21] = (odomTheta_+5.175686471)/100.3310042;
       }
+
+      // Calculates corrected theta and scales to range from -180 to 180 degrees
       double corrected_theta = odomTheta_ + odom_offset[0];
       corrected_theta = std::fmod(corrected_theta, 360.0);
       if (corrected_theta > 180) {
@@ -111,16 +155,24 @@ class Offset : public rclcpp::Node {
       } else if (corrected_theta < -180) {
         corrected_theta += 360;
       }
+
+      // Calculates corrected x and y values
       double corrected_x = odomX_ + odom_offset[1];
       double corrected_y = odomY_ + odom_offset[2];
+
+      // Creates string stream and builds odometry message
       std::stringstream ss;
       ss << "Corrected Position: X: " << std::fixed << std::setprecision(2) 
-        << corrected_x << ", Y: " << corrected_y << ", Yaw: " << corrected_theta << " deg     ";
+        << corrected_x << ", Y: " << corrected_y << ", Yaw: " << corrected_theta 
+        << " deg     ";
       std_msgs::msg::String s = std_msgs::msg::String();
       s.data = ss.str();
+
+      // Publishes offset odometry to output topic
       _outputPublisher->publish(s);
     }
 
+    // Callback function to save wheel standardized velocities if no active collision
     void wheel_callback(const irobot_create_msgs::msg::WheelVels::SharedPtr msg) {
       if (!collision_occured) {
         sensor_data[19] = (msg->velocity_left-7.569417752)/3.62661051;
@@ -128,12 +180,14 @@ class Offset : public rclcpp::Node {
       }
     }
 
+    // Callback function to save standardized squal for mouse if no active collision
     void mouse_callback(const irobot_create_msgs::msg::Mouse::SharedPtr msg) {
       if (!collision_occured) {
         sensor_data[18] = (msg->last_squal-107.0426065)/28.50345253;
       }
     }
 
+    // Callback function to save standardized infrared values
     void ir_callback(const irobot_create_msgs::msg::IrIntensityVector::SharedPtr msg) {
       if (!collision_occured) {
         sensor_data[11] = (msg->readings[0].value-238.3784461)/515.4597672;
@@ -146,6 +200,7 @@ class Offset : public rclcpp::Node {
       }
     }
 
+    // Callback function to save standardized IMU values
     void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg) {
       if (!collision_occured) {
         sensor_data[5] = (msg->linear_acceleration.x+0.884702229)/2.989697113;
@@ -157,10 +212,16 @@ class Offset : public rclcpp::Node {
       }
     }
 
-    void hazard_callback(const irobot_create_msgs::msg::HazardDetectionVector::SharedPtr msg) {
+    // Callback function to register collision and obtain offset from neural network
+    void hazard_callback(const irobot_create_msgs::msg::HazardDetectionVector::SharedPtr
+      msg) {
+      // If there is no active collision
       if (!collision_occured) {
+        // Checks each hazard message in the vector
         for (const auto& hazard : msg->detections) {
+          // If the hazard is a bump sensor
           if (hazard.type == irobot_create_msgs::msg::HazardDetection::BUMP) {
+            // Determines which bump sensor and sets value in vector to standardized 1
             if (hazard.header.frame_id == "bump_left") {
               sensor_data[0] = 1.463465846;
             } else if (hazard.header.frame_id == "bump_front_left") {
@@ -172,15 +233,33 @@ class Offset : public rclcpp::Node {
             } else {
               sensor_data[4] = 1.463465846;
             }
+
+            // Sets collision_occured to true to indicate active collision
             collision_occured=true;
+
+            // Net is in eval mode as it is not being trained
             _net->eval();
+
+            // Ensures gradient descent is not performed for efficiency
             torch::NoGradGuard no_grad;
-            torch::Tensor input_tensor = torch::from_blob(sensor_data.data(),{1,22},torch::kDouble).to(torch::kFloat);;
+
+            // Creates a tensor from the sensor data
+            torch::Tensor input_tensor = torch::from_blob(sensor_data.data(),{1,22},
+              torch::kDouble).to(torch::kFloat);
+
+            // Obtains output from neural network and gets values as float
             torch::Tensor output_tensor = _net->forward(input_tensor);
             float* output_data_ptr = output_tensor.data_ptr<float>();
-            odom_offset[0] += static_cast<double>(output_data_ptr[0])*2.725697775+0.054030836;
-            odom_offset[1] += static_cast<double>(output_data_ptr[1])*0.117770977-0.01201306;
-            odom_offset[2] += static_cast<double>(output_data_ptr[2])*0.172681628-0.010258537;
+
+            // Adds offsets to cumulative offsets after converting back to raw form
+            odom_offset[0] += static_cast<double>(output_data_ptr[0])*2.725697775
+              +0.054030836;
+            odom_offset[1] += static_cast<double>(output_data_ptr[1])*0.117770977
+              -0.01201306;
+            odom_offset[2] += static_cast<double>(output_data_ptr[2])*0.172681628
+              -0.010258537;
+
+            // Creates 3 second timer with callback to function to reset collision state
             _timer = this->create_wall_timer(
                 std::chrono::seconds(3),
                 std::bind(&Offset::reset_collision_state, this)
